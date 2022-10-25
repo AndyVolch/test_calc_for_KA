@@ -8,25 +8,30 @@ public class Main {
         Scanner s = new Scanner(System.in);
         System.out.println("Введите пример одной строкой");
         String input = s.nextLine();
+        System.out.println(Main.calc(input));
+    }
+    public static String calc(String input){
         // Разбиваем строку на элементы цифры и ариф.знак
         String[] parts = input.split(" ");
 
-        // Создаём объект класса Check для проверки входящей строки
-        Check input_line = new Check();
-        input_line.input = parts;
-
         // Проверка на формат операции
         try {
-            input_line.check_form();
+            Check.check_form(parts);
         }catch (IOException e){
             System.out.println(e);
             System.exit(1);
         }
-
-        // Проверка на соответствие типов чисел
+        // Проверка на соответствие типов чисел + на соответствие символов
         boolean roman = false; // Переменная-флаг, запоминающая тип чисел
         try {
-            roman = input_line.check_number_type();
+            roman = Check.check_number_type(parts);
+        }catch (IOException e){
+            System.out.println(e);
+            System.exit(1);
+        }
+        // Проверка на вхождение арабских чисел в диапазон от 1 до 10
+        try {
+            Check.arabic_confirm(parts);
         }catch (IOException e){
             System.out.println(e);
             System.exit(1);
@@ -42,9 +47,10 @@ public class Main {
         // Создаём объект класса Count для расчёта ответа
         Count answer = new Count();
 
+        // Подготовим переменную для вывода ответа
+        String out = "";
         // В зависимости от типа чисел получаем ответ
-
-        if(roman == true){//РИМСКИЕ ЧИСЛА: Трансформация римских цифр в арабские (int)
+        if(roman){//РИМСКИЕ ЧИСЛА: Трансформация римских цифр в арабские (int)
             answer.value1 = num1.roman_to_arabic();
             answer.value2 = num2.roman_to_arabic();
             answer.sign = parts[1];
@@ -60,32 +66,32 @@ public class Main {
             Transform roman_answer = new Transform();
             roman_answer.arabic = ans;
             try {
-                System.out.println(roman_answer.arabic_to_roman());
+                out = roman_answer.arabic_to_roman();
             }catch (IOException e){
                 System.out.println(e);
             }
-        }else{// АРБСКИЕ ЧИСЛА: Трансформация в int
+        }else {// АРБСКИЕ ЧИСЛА: Трансформация в int
             answer.value1 = num1.arabic_to_count();
             answer.value2 = num2.arabic_to_count();
             answer.sign = parts[1];
             // Расчёт
             try {
-                System.out.println(answer.count());
-            }catch (IOException e){
+            out = answer.count()+"";
+            } catch (IOException e) {
                 System.out.println(e);
             }
         }
+    return out;
     }
 }
 
 class Check{// КЛАСС ПРОВЕРОК
-    String[] input;
-    void check_form() throws IOException{// ПРОВЕРКА НА СООТВЕТСТВИЕ ФОРМЫ ВХОДНОГО ПРИМЕРА
+    static void check_form(String[] input) throws IOException{// ПРОВЕРКА НА СООТВЕТСТВИЕ ФОРМЫ ВХОДНОГО ПРИМЕРА
         if(input.length != 3) {
             throw new IOException("Формат операции не удовлетворяет условию");
         }
     }
-    boolean check_number_type() throws IOException{// ПРОВЕРКА НА СООТВЕТСВИЕ ЧИСЕЛ РИМСКОЙ/АРАБСКОЙ СИСТЕМЕ
+    static boolean check_number_type(String[] input) throws IOException{// ПРОВЕРКА НА СООТВЕТСВИЕ ЧИСЕЛ РИМСКОЙ/АРАБСКОЙ СИСТЕМЕ
         // По умолчанию числа арабские
         boolean roman_flag1 = false;
         boolean roman_flag2 = false;
@@ -96,7 +102,7 @@ class Check{// КЛАСС ПРОВЕРОК
             roman_flag1 = true;
         // если индекс дополнительно не соответствует арабским числам, бросаем исключение
         } else if (input[0].codePointAt(0) < 49 || input[0].codePointAt(0) > 57) {
-            throw new IOException("В строке неизвестные символы. Используйте арабские или римские цифры");
+            throw new IOException("В строке есть неидопустимые символы. Используйте арабские или римские цифры от 1 до 10");
         }
 
         //Проверяем второе число
@@ -104,7 +110,7 @@ class Check{// КЛАСС ПРОВЕРОК
         if (input[2].codePointAt(0) == 73 || input[2].codePointAt(0) == 86 || input[2].codePointAt(0) == 88){
             roman_flag2 = true;
         } else if (input[2].codePointAt(0) < 49 || input[2].codePointAt(0) > 57) {
-            throw new IOException("В строке неизвестные символы. Используйте арабские или римские цифры");
+            throw new IOException("В строке есть неидопустимые символы. Используйте арабские или римские цифры от 1 до 10");
         }
 
         // Проверка на соответствие двух чисел одному типу
@@ -112,6 +118,13 @@ class Check{// КЛАСС ПРОВЕРОК
             throw new IOException("Типы чисел не соответствуют друг другу");
         }
     return roman_flag1;
+    }
+    static void arabic_confirm(String [] input) throws IOException{
+        // Если используем арабские числа и они или > 10 — бросаем исключение
+        // Условие, что они не могут быть <1 соблюдается в методе check_number_type()
+        if (Check.check_number_type(input) == false && (Integer.parseInt(input[0]) > 10 || Integer.parseInt(input[2]) > 10 )){
+            throw new IOException("Арабские числа в примере должны быть от 1 до 10 включительно");
+        }
     }
 }
 
@@ -144,13 +157,12 @@ class Transform{ // КЛАСС ПРЕОБРАЗОВАНИЙ РАЗНЫХ ТИП�
     }
 }
 
-class Count { // КЛАСС АРИФМЕТИЧЕСКИх ОПЕРАЦИЙ
+class Count { // КЛАСС АРИФМЕТИЧЕСКИХ ОПЕРАЦИЙ
 int value1;
 int value2;
 String sign;
     int count() throws IOException{
         int result = 0;
-        String error = "";
         switch(sign){
             case "+":
                 result = value1 + value2;
